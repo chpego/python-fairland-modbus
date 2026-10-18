@@ -3,6 +3,7 @@ name = "fairland-modbus"
 version = "0.0.0"
 description = "Manage inverter pumps, heat pumps & water treatment devices from Fairland Group"
 license = { text = "Apache-2.0" }
+license-files = ["LICEN[CS]E*"]
 readme = "README.md"
 requires-python = ">=3.12"
 keywords = [
