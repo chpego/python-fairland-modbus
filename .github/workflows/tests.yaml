@@ -96,7 +96,9 @@ jobs:
 
       - name: Check the built wheel installs
         env:
-          UV_LOCKED: ""
+          # uv rejects an empty string here; "0" is the way to turn the
+          # workflow-wide UV_LOCKED off for this lockfile-free step.
+          UV_LOCKED: "0"
         run: uv run --isolated --no-project --with dist/*.whl python -c "import fairland_modbus; print(fairland_modbus.__version__)"
 
       - name: Upload build artifacts
