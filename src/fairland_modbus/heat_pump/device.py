@@ -88,15 +88,24 @@ class FairlandHeatPump(Device):
         self.status = Status(unit)
         self.readings = Readings(unit)
         self.settings = Settings(unit)
-        # A function written since the last poll of the settings. A write does
-        # not refresh the decoded value, and a setpoint sent right after a
-        # function change must go to the register of the new function.
+        # Values written since the last poll of their block. A write does not
+        # refresh the decoded value, and a command sent right after another
+        # must build on it: a setpoint goes to the register of the function
+        # just chosen, and a switch-on follows a switch-off not polled yet.
         self._written_function: Function | None = None
+        self._written_power: bool | None = None
 
     @property
     def function(self) -> Function | None:
         """The function the heat pump is in, counting a write not polled yet."""
         return self._written_function or self.settings.function
+
+    @property
+    def power(self) -> bool | None:
+        """Whether the heat pump is on, counting a write not polled yet."""
+        if self._written_power is not None:
+            return self._written_power
+        return self.controls.power
 
     @property
     def target_temperature(self) -> float | None:
@@ -152,6 +161,8 @@ class FairlandHeatPump(Device):
             report = await self.async_poll(POLLED)
         if "settings" in report.updated:
             self._written_function = None
+        if "controls" in report.updated:
+            self._written_power = None
         if not report.updated and all(
             isinstance(err, _SILENT_BEHIND_GATEWAY) for err in report.failed.values()
         ):
@@ -167,6 +178,7 @@ class FairlandHeatPump(Device):
         """Switch the heat pump on or off."""
         with _translated_errors():
             await self.controls.async_set_power(on)
+        self._written_power = bool(on)
 
     async def async_start_defrost(self) -> None:
         """Ask the board to defrost now."""

@@ -224,6 +224,33 @@ async def test_keeps_the_written_function_while_settings_fail(
     assert heat_pump.function is Function.COOLING
 
 
+async def test_power_follows_a_write_until_the_next_poll(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """A switch-off counts at once, and the board is the reference again after."""
+    await heat_pump.async_update()
+    assert heat_pump.power is True
+
+    await heat_pump.async_set_power(False)
+    assert heat_pump.power is False
+
+    unit.coil[0] = True
+    await heat_pump.async_update()
+    assert heat_pump.power is True
+
+
+async def test_keeps_the_written_power_while_controls_fail(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """A poll that misses the coils keeps the state just written."""
+    await heat_pump.async_set_power(False)
+    unit.fail_read(0, IllegalDataAddressError(), register_type="coil")
+
+    await heat_pump.async_update()
+
+    assert heat_pump.power is False
+
+
 def test_gives_the_setpoint_range_of_each_function() -> None:
     """Each function has its own setpoint range, from the table."""
     assert FairlandHeatPump.target_temperature_limits(Function.AUTO) == (12, 40)
