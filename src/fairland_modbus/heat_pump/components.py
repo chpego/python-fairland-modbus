@@ -26,6 +26,7 @@ from typing import Any
 
 from modbus_connection.model import (
     Component,
+    NumberField,
     coil,
     discrete_input,
     enum,
@@ -102,12 +103,14 @@ def member[E: Function | WorkingMode | PumpMode](
     return _validate
 
 
-def _type_1(address: int, *, writable: Any = False) -> Any:
+def _type_1(
+    address: int, *, writable: bool | Callable[[Any], float] = False
+) -> NumberField[float]:
     """A type 1 temperature: degrees = raw / 2 - 30."""
     return gauge(address, 0.5, offset=-30, signed=False, writable=writable, unit="°C")
 
 
-def _type_2(address: int) -> Any:
+def _type_2(address: int) -> NumberField[float]:
     """A type 2 temperature: degrees = raw / 2."""
     return gauge(address, 0.5, signed=False, unit="°C")
 
