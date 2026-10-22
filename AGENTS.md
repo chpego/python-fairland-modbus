@@ -25,7 +25,12 @@ The consumer owns the connection: it hands the library a `ModbusUnit`
 | `  fairland.py`        | The `Fairland` client: probe, update, detection       |
 | `  components.py`      | Register field declarations per block, and writes     |
 | `  const.py`           | Addresses and enums                                   |
-| `  exceptions.py`      | `FairlandError` and `FairlandConnectionError` |
+| `  exceptions.py`      | `FairlandError` and its subclasses                    |
+| `  heat_pump/`         | Heat pumps with an MWH216 or MWH298 board             |
+| `    components.py`    | The fixed read blocks the board's table requires      |
+| `    device.py`        | `FairlandHeatPump`: validate, poll, write             |
+| `    testing.py`       | A register image and the allowed reads, for tests     |
+| `tools/simulator.py`   | A heat pump simulator written from the register table |
 | `tests/`               | pytest suite; each test has a one-line docstring      |
 | `examples/`            | Runnable examples, exercised by `test_examples.py`    |
 
@@ -71,6 +76,12 @@ See [AI_POLICY.md](AI_POLICY.md) for the contribution policy around AI tooling.
   `0xFFFF` uint16, `0xFFFFFFFF` uint32, IEEE-754 NaN, +/-FLT_MAX "no limit").
 - Writable control fields carry validators, and a successful write caches the
   value the device would report back (`decode(encode(value))`), not the raw input.
+- The MWH216 and MWH298 boards must be read in blocks of exactly 48 bits or 3
+  registers, from the starts the table allows, or they may return wrong data.
+  Every component claims the
+  first and last address of each block so the planner reads it whole.
+  `tests/test_heat_pump.py` checks every read against
+  `heat_pump.testing.ALLOWED_READS`, and the simulator refuses anything else.
 - `test_sunspec_conformance.py` checks the register map against the vendored
   SunSpec model definitions. If you move an address or scale reference, it will
   tell you whether it still matches the spec.
