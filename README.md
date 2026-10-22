@@ -161,6 +161,11 @@ uv run python tools/simulator.py --tcp 5020 --other-board
 * The super silence mode, the InverX, MWH298, BWT and PC1004 reports, from the
   [Home Assistant community thread][thread].
 * The DIN terminals, from the Madimack setup of [Elwell/pool-heatpump][elwell].
+* The refused working mode writes, from the Geco GEPAC08 tests of
+  [Locodice67/Pool-Heat-Pump-IPHCR45-Modbus][locodice67].
+
+None of these projects carries a license, so no code was taken from them: the
+module is written from the register table.
 
 ## License
 
@@ -171,3 +176,4 @@ Apache License 2.0, see [LICENSE](LICENSE).
 [spdr870]: https://github.com/spdr870/fairland_iphcr45_modbus
 [thread]: https://community.home-assistant.io/t/controlling-a-fairland-pool-heatpump-eliminating-tuya/579467
 [elwell]: https://github.com/Elwell/pool-heatpump
+[locodice67]: https://github.com/Locodice67/Pool-Heat-Pump-IPHCR45-Modbus
