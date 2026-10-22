@@ -241,6 +241,15 @@ class Status(Component):
         return tuple(code for code in FAULT_CODES.values() if self.code_active(code))
 
     @property
+    def remote_switch_closed(self) -> bool | None:
+        """Whether the remote on/off contact on DIN2 is closed.
+
+        The manual shows "OFF" while this contact is open, and owners wire a
+        volt-free switch or a pool controller relay to it.
+        """
+        return self._din_2
+
+    @property
     def no_water_flow(self) -> bool | None:
         """Whether the no-water-flow protection (E3) is active."""
         return self.code_active(NO_WATER_FLOW_CODE)

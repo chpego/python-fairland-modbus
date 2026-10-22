@@ -114,13 +114,21 @@ class FairlandHeatPump(Device):
     async def async_validate(self) -> None:
         """Check the device answers like this board, or raise.
 
-        Raises ``NotAFairlandDeviceError`` when the values make no sense for
-        the board, ``FairlandTimeoutError`` when nothing answers behind a live
-        link, and ``FairlandConnectionError`` when the link fails.
+        Raises ``NotAFairlandDeviceError`` when the device refuses the board's
+        registers or its values make no sense for the board,
+        ``FairlandTimeoutError`` when nothing answers behind a live link, and
+        ``FairlandConnectionError`` when the link fails.
         """
-        with _translated_errors():
-            await self.readings.async_update(notify=False)
-            await self.settings.async_update(notify=False)
+        try:
+            with _translated_errors():
+                await self.readings.async_update(notify=False)
+                await self.settings.async_update(notify=False)
+        except FairlandRefusedError as err:
+            # Another Fairland board, like the PC1004, answers every read of
+            # this table with an exception response.
+            raise NotAFairlandDeviceError(
+                f"the device refuses the registers of this board: {err}"
+            ) from err
 
         settings = self.settings
         if settings.function is None or settings.working_mode is None:

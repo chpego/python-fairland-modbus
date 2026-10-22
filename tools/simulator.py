@@ -16,6 +16,7 @@ Usage:
     python tools/simulator.py --tcp 5020 --fault E3  # no water flow
     python tools/simulator.py --tcp 5020 --refuse-working-mode
     python tools/simulator.py --tcp 5020 --gateway-silent
+    python tools/simulator.py --tcp 5020 --other-board  # like a PC1004
 
 Behaviour taken from the table:
     coil 0             power; discrete input 0 follows it
@@ -251,12 +252,19 @@ class _ModbusException(Exception):
 
 
 async def serve_tcp(
-    unit: HeatPump, port: int, unit_id: int, *, gateway_silent: bool = False
+    unit: HeatPump,
+    port: int,
+    unit_id: int,
+    *,
+    gateway_silent: bool = False,
+    other_board: bool = False,
 ) -> asyncio.Server:
     """Serve Modbus TCP on ``port``, like a gateway in "Modbus TCP to RTU" mode.
 
     With ``gateway_silent``, the gateway answers but the heat pump behind it
-    does not: every request gets exception 0B (gateway target failed).
+    does not: every request gets exception 0B (gateway target failed). With
+    ``other_board``, a board of another family answers every request with
+    exception 01 (illegal function), as a PC1004 does.
     """
 
     async def client(
@@ -269,6 +277,8 @@ async def serve_tcp(
                 pdu = await reader.readexactly(length - 1)
                 if gateway_silent:
                     response = bytes([pdu[0] | 0x80, 0x0B])
+                elif other_board:
+                    response = bytes([pdu[0] | 0x80, 0x01])
                 elif target != unit_id:
                     response = bytes([pdu[0] | 0x80, 0x0B])  # nobody at that ID
                 else:
@@ -377,6 +387,11 @@ async def main() -> None:
         help="refuse every working mode write, like a GEPAC08",
     )
     parser.add_argument(
+        "--other-board",
+        action="store_true",
+        help="answer like a board of another family (exception 01)",
+    )
+    parser.add_argument(
         "--gateway-silent",
         action="store_true",
         help="answer like a gateway whose heat pump is off (exception 0B)",
@@ -389,7 +404,11 @@ async def main() -> None:
     tasks = []
     if args.tcp:
         server = await serve_tcp(
-            unit, args.tcp, args.unit_id, gateway_silent=args.gateway_silent
+            unit,
+            args.tcp,
+            args.unit_id,
+            gateway_silent=args.gateway_silent,
+            other_board=args.other_board,
         )
         tasks.append(server.serve_forever())
     if args.rtu:

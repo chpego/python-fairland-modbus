@@ -7,6 +7,7 @@ from modbus_connection import (
     GatewayTargetError,
     IllegalDataAddressError,
     IllegalDataValueError,
+    IllegalFunctionError,
     ModbusConnectionError,
     ModbusTimeoutError,
 )
@@ -92,6 +93,7 @@ async def test_decodes_the_status(heat_pump: FairlandHeatPump) -> None:
     assert s.malfunction is False
     assert s.compressor_demand is True
     assert s.digital_input(2) is True
+    assert s.remote_switch_closed is True
     assert s.digital_input(1) is False
     assert s.digital_output(1) is True
     assert s.digital_output(9) is False
@@ -534,6 +536,17 @@ async def test_an_unknown_function_fails_validation(
     unit.holding[0] = 9
 
     with pytest.raises(NotAFairlandDeviceError, match="function"):
+        await heat_pump.async_validate()
+
+
+@pytest.mark.parametrize("error", [IllegalFunctionError(), IllegalDataAddressError()])
+async def test_a_board_refusing_the_table_is_not_this_board(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit, error: Exception
+) -> None:
+    """A device refusing every read, like a PC1004 board, is not this board."""
+    unit.fail_requests(error)
+
+    with pytest.raises(NotAFairlandDeviceError, match="refuses"):
         await heat_pump.async_validate()
 
 

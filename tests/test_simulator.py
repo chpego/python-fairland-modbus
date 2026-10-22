@@ -24,7 +24,11 @@ from modbus_connection import (
 from modbus_connection.model import Component, integer
 from modbus_connection.tmodbus import ModbusConnection
 
-from fairland_modbus import FairlandRefusedError, FairlandTimeoutError
+from fairland_modbus import (
+    FairlandRefusedError,
+    FairlandTimeoutError,
+    NotAFairlandDeviceError,
+)
 from fairland_modbus.heat_pump import (
     DEFAULT_BAUDRATE,
     DEFAULT_PARITY,
@@ -156,6 +160,15 @@ async def test_a_silent_board_behind_the_gateway_times_out() -> None:
         with pytest.raises(FairlandTimeoutError):
             await heat_pump.async_update()
         with pytest.raises(FairlandTimeoutError):
+            await heat_pump.async_validate()
+
+
+async def test_a_board_of_another_family_is_not_this_board() -> None:
+    """A board refusing every function of the table fails validation."""
+    async for _, connection in _tcp(other_board=True):
+        heat_pump = FairlandHeatPump(connection.for_unit(1))
+
+        with pytest.raises(NotAFairlandDeviceError):
             await heat_pump.async_validate()
 
 
