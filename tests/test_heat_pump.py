@@ -608,3 +608,76 @@ async def test_raw_reads_translate_errors(
 
     with pytest.raises(FairlandConnectionError):
         await heat_pump.async_read_raw()
+
+
+def _keep_working_mode(unit: MockModbusUnit, kept: int, writes_left: int = 0) -> None:
+    """Make the mock board acknowledge working mode writes and keep ``kept``."""
+
+    def keep(event: WriteEvent) -> None:
+        nonlocal writes_left
+        if event.register_type == "holding" and event.address == 1:
+            if writes_left:
+                writes_left -= 1
+            else:
+                unit.holding[1] = kept
+
+    unit.on_write(keep)
+
+
+async def test_a_working_mode_kept_silently_is_reported_as_refused(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """A board that acknowledges the write and keeps its mode is caught."""
+    heat_pump.working_mode_settle = 0
+    _keep_working_mode(unit, WorkingMode.SILENCE)
+
+    with pytest.raises(FairlandRefusedError, match="kept the working mode silence"):
+        await heat_pump.async_set_working_mode(WorkingMode.TURBO)
+
+    assert heat_pump.settings.working_mode is WorkingMode.SILENCE
+
+
+async def test_a_working_mode_applied_late_is_accepted(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """A mode that shows up at the second read back counts as accepted."""
+    heat_pump.working_mode_settle = 0
+    reads = 0
+    original = unit.read_holding_registers
+
+    async def read(address: int, count: int) -> list[int]:
+        nonlocal reads
+        if address == 0:
+            reads += 1
+            late = WorkingMode.SILENCE if reads == 1 else WorkingMode.TURBO
+            unit.holding[1] = late
+        return await original(address, count)
+
+    unit.read_holding_registers = read  # type: ignore[method-assign]
+
+    await heat_pump.async_set_working_mode(WorkingMode.TURBO)
+
+    assert reads == 2
+    assert heat_pump.settings.working_mode is WorkingMode.TURBO
+
+
+async def test_a_working_mode_kept_unreadable_is_reported_as_unknown(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """A read back outside the enum still reports a refusal."""
+    heat_pump.working_mode_settle = 0
+    _keep_working_mode(unit, 9)
+
+    with pytest.raises(FairlandRefusedError, match="kept the working mode unknown"):
+        await heat_pump.async_set_working_mode(WorkingMode.TURBO)
+
+
+async def test_a_failed_read_back_trusts_the_acknowledged_write(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """When the read back fails, the write stands and the next poll decides."""
+    unit.fail_read(0, ModbusTimeoutError("silent"), register_type="holding")
+
+    await heat_pump.async_set_working_mode(WorkingMode.TURBO)
+
+    assert unit.holding[1] == WorkingMode.TURBO

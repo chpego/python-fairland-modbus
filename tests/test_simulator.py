@@ -152,6 +152,17 @@ async def test_a_board_without_the_mode_refuses_it() -> None:
             await heat_pump.async_set_working_mode(WorkingMode.SILENCE)
 
 
+async def test_a_board_keeping_its_mode_is_caught() -> None:
+    """A board that acknowledges turbo and keeps its mode surfaces as refused."""
+    async for _, connection in _tcp(board={"keep_working_mode": True}):
+        heat_pump = FairlandHeatPump(connection.for_unit(1))
+        heat_pump.working_mode_settle = 0
+
+        await heat_pump.async_set_working_mode(WorkingMode.SILENCE)
+        with pytest.raises(FairlandRefusedError, match="kept the working mode silence"):
+            await heat_pump.async_set_working_mode(WorkingMode.TURBO)
+
+
 async def test_a_silent_board_behind_the_gateway_times_out() -> None:
     """A gateway answering 0B on every request means the pump is off."""
     async for _, connection in _tcp(gateway_silent=True):

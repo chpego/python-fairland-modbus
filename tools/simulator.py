@@ -15,6 +15,7 @@ Usage:
     python tools/simulator.py --rtu                  # prints the serial port
     python tools/simulator.py --tcp 5020 --fault E3  # no water flow
     python tools/simulator.py --tcp 5020 --refuse-working-mode
+    python tools/simulator.py --tcp 5020 --keep-working-mode  # like a GEPAC08
     python tools/simulator.py --tcp 5020 --gateway-silent
     python tools/simulator.py --tcp 5020 --other-board  # like a PC1004
 
@@ -42,6 +43,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 
 _LOGGER = logging.getLogger("fairland_heat_pump_simulator")
+
+# The working modes a GEPAC08 acknowledges without switching to them.
+_KEPT_MODES = frozenset({2, 3})
 
 # Where a read may start, and how much it must read, per function code.
 BIT_BLOCK = 48
@@ -93,6 +97,7 @@ class HeatPump:
 
     faults: tuple[str, ...] = ()
     refuse_working_mode: bool = False
+    keep_working_mode: bool = False
     coils: dict[int, bool] = field(default_factory=dict)
     discrete: dict[int, bool] = field(default_factory=dict)
     inputs: dict[int, int] = field(default_factory=dict)
@@ -232,8 +237,13 @@ class HeatPump:
         if address not in WRITABLE:
             raise _ModbusException(2)
         if address == 1 and self.refuse_working_mode:
-            _LOGGER.warning("Working mode %s refused, like on a GEPAC08", value)
+            _LOGGER.warning("Working mode %s refused with an exception", value)
             raise _ModbusException(3)
+        if address == 1 and self.keep_working_mode and value in _KEPT_MODES:
+            # A GEPAC08 owner saw this: the write is acknowledged and the
+            # board keeps its mode.
+            _LOGGER.warning("Working mode %s acknowledged and ignored", value)
+            return
         low, high, step = WRITABLE[address]
         if not low <= value <= high or (value - low) % step:
             _LOGGER.warning("Holding %s <- %s refused: out of range", address, value)
@@ -384,7 +394,12 @@ async def main() -> None:
     parser.add_argument(
         "--refuse-working-mode",
         action="store_true",
-        help="refuse every working mode write, like a GEPAC08",
+        help="refuse every working mode write with exception 03",
+    )
+    parser.add_argument(
+        "--keep-working-mode",
+        action="store_true",
+        help="acknowledge super silence and turbo but keep the mode, like a GEPAC08",
     )
     parser.add_argument(
         "--other-board",
@@ -399,7 +414,9 @@ async def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     unit = HeatPump(
-        faults=tuple(args.fault), refuse_working_mode=args.refuse_working_mode
+        faults=tuple(args.fault),
+        refuse_working_mode=args.refuse_working_mode,
+        keep_working_mode=args.keep_working_mode,
     )
     tasks = []
     if args.tcp:

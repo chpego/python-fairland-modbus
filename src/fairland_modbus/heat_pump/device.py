@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Final
@@ -52,6 +53,10 @@ SERVICE_SETTINGS: Final = frozenset(
 # board behind it stays silent: the heat pump is off or unwired.
 _SILENT_BEHIND_GATEWAY = (GatewayPathUnavailableError, GatewayTargetError)
 
+# Seconds to wait before the second read back of a working mode. Some boards
+# acknowledge a working mode write and keep their mode, without an error.
+WORKING_MODE_SETTLE: Final = 1.0
+
 # A pool water temperature, in degrees, that tells this board from another
 # Modbus device answering at the same address.
 _PLAUSIBLE_WATER = (-20.0, 60.0)
@@ -94,6 +99,7 @@ class FairlandHeatPump(Device):
         # just chosen, and a switch-on follows a switch-off not polled yet.
         self._written_function: Function | None = None
         self._written_power: bool | None = None
+        self.working_mode_settle = WORKING_MODE_SETTLE
 
     @property
     def function(self) -> Function | None:
@@ -194,10 +200,31 @@ class FairlandHeatPump(Device):
     async def async_set_working_mode(self, mode: WorkingMode) -> None:
         """Choose smart, silence, super silence or turbo.
 
-        Raises ``FairlandRefusedError`` when the board does not have the mode.
+        Raises ``FairlandRefusedError`` when the board refuses the mode. Some
+        boards answer with an exception, others acknowledge the write and keep
+        their mode, so the mode is read back. Some accept a mode only while
+        the compressor runs.
         """
         with _translated_errors():
             await self.settings.write("working_mode", mode)
+        mode = WorkingMode(mode)
+        for attempt in range(2):
+            if attempt:
+                await asyncio.sleep(self.working_mode_settle)
+            try:
+                with _translated_errors():
+                    await self.settings.async_update(notify=False)
+            except FairlandError:
+                # The write went through and the next poll tells the truth.
+                return
+            if self.settings.working_mode is mode:
+                return
+        kept = self.settings.working_mode
+        raise FairlandRefusedError(
+            f"the heat pump kept the working mode "
+            f"{kept.name.lower() if kept is not None else 'unknown'} "
+            f"instead of {mode.name.lower()}"
+        )
 
     async def async_set_target_temperature(
         self, temperature: float, function: Function | None = None
