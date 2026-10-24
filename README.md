@@ -10,7 +10,7 @@ on the pymodbus and tmodbus backends, and inside Home Assistant.
 
 | Device | Module | Status |
 | --- | --- | --- |
-| Inverter pool heat pumps with an MWH216 or MWH298 board (Fairland IPHCR and InverX, and the same board under other brands) | `fairland_modbus.heat_pump` | Written from the Fairland register table, tested against a simulator of it. Feedback from real units welcome. |
+| Inverter pool heat pumps with an MWH216 or MWH298 board (Fairland IPHCR and InverX, and the same board under other brands) | `fairland_modbus.heat_pump` | Written from the Fairland register table and tested against a simulator of it. Tested on a Geco GEPAC08 with an MWH298-V3 board. Feedback from other units welcome. |
 
 ## Install
 
@@ -113,8 +113,11 @@ type 2 is `raw / 2`. Setpoints step by one degree.
 
 The working mode takes 0 (smart), 1 (silence) and 3 (turbo) per the table.
 Value 2 (super silence) is not in the table, but owners of IPHCR heat pumps use
-it. Some boards refuse a working mode write altogether: the library then raises
-`FairlandRefusedError`.
+it. Boards do not take every mode. A GEPAC08 takes silence, takes smart only
+while the compressor runs, and acknowledges turbo and super silence without
+switching to them. The library reads the mode back, and raises
+`FairlandRefusedError` when the board kept its mode or answered the write with
+an exception.
 
 ### Errors
 
@@ -161,8 +164,8 @@ uv run python tools/simulator.py --tcp 5020 --other-board
 * The super silence mode, the InverX, MWH298, BWT and PC1004 reports, from the
   [Home Assistant community thread][thread].
 * The DIN terminals, from the Madimack setup of [Elwell/pool-heatpump][elwell].
-* The refused working mode writes, from the Geco GEPAC08 tests of
-  [Locodice67/Pool-Heat-Pump-IPHCR45-Modbus][locodice67].
+* The working mode behaviour and the DIN3 water flow switch, from the Geco
+  GEPAC08 field tests of [Locodice67/Pool-Heat-Pump-IPHCR45-Modbus][locodice67].
 
 None of these projects carries a license, so no code was taken from them: the
 module is written from the register table.
