@@ -13,7 +13,7 @@ import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Final, Literal
 
 import pytest
 from modbus_connection import (
@@ -30,15 +30,17 @@ from fairland_modbus import (
     NotAFairlandDeviceError,
 )
 from fairland_modbus.heat_pump import (
-    DEFAULT_BAUDRATE,
-    DEFAULT_PARITY,
-    DEFAULT_STOPBITS,
     FairlandHeatPump,
     Function,
     WorkingMode,
 )
 
 _SIMULATOR = Path(__file__).resolve().parent.parent / "tools" / "simulator.py"
+
+# The board's fixed line settings: 9600 baud, 8 data bits, no parity, 1 stop bit.
+_BAUDRATE: Final = 9600
+_PARITY: Final[Literal["N"]] = "N"
+_STOPBITS: Final[Literal[1]] = 1
 
 
 def _load_simulator() -> ModuleType:
@@ -209,9 +211,9 @@ async def test_polls_the_simulator_over_rtu() -> None:
     connection = ModbusConnection(
         ModbusSerialParams(
             device=port,
-            baudrate=DEFAULT_BAUDRATE,
-            parity=DEFAULT_PARITY,
-            stopbits=DEFAULT_STOPBITS,
+            baudrate=_BAUDRATE,
+            parity=_PARITY,
+            stopbits=_STOPBITS,
         ),
         timeout=2,
     )
