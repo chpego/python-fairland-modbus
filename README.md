@@ -103,7 +103,7 @@ input blocks, 5 input register blocks and 4 holding register blocks.
 | Space | Addresses | Content |
 | --- | --- | --- |
 | Coils | 0, 1 | Power, forced defrost. Coil 2 (factory reset) is never written. |
-| Discrete inputs | 0 to 17 | On, defrosting, DIN1 to DIN5 (DIN2 is the remote on/off contact), OUT1 to OUT9, malfunction, compressor demand |
+| Discrete inputs | 0 to 17 | On, defrosting, DIN1 to DIN5 (DIN2 is the remote on/off contact, DIN3 the water flow switch on a GEPAC08), OUT1 to OUT9, malfunction, compressor demand |
 | Discrete inputs | 48 to 91 | Fault and protection codes E0 to Ed, P0 to PA, F0 to Fb |
 | Input registers | 0 to 14 | Compressor, PFC voltage, water and refrigerant temperatures, current, expansion valve, fan |
 | Holding registers | 0 to 10 | Function, working mode, the three setpoints, pump mode and the service parameters P1 to P5 |

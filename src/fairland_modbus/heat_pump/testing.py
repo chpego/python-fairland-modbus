@@ -17,6 +17,7 @@ HEATING: Final[dict[str, dict[int, Any]]] = {
     "discrete": {
         0: True,  # on
         3: True,  # DIN2: the customer control switch is closed
+        4: True,  # DIN3: the water flow switch is closed
         7: True,  # OUT1
         17: True,  # the compressor is asked to run
     },

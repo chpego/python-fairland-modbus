@@ -138,6 +138,7 @@ async def test_reports_no_water_flow() -> None:
         await heat_pump.async_update()
 
         assert heat_pump.status.no_water_flow is True
+        assert heat_pump.status.flow_switch_closed is False
         assert heat_pump.status.malfunction is True
         assert heat_pump.status.active_codes == ("E3",)
         assert heat_pump.status.compressor_demand is False

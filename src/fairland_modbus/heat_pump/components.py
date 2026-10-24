@@ -250,6 +250,15 @@ class Status(Component):
         return self._din_2
 
     @property
+    def flow_switch_closed(self) -> bool | None:
+        """Whether the water flow switch on DIN3 is closed, so water flows.
+
+        Unlike the E3 protection, it follows the water while the heat pump is
+        off. Seen on a Geco GEPAC08 with an MWH298-V3 board.
+        """
+        return self._din_3
+
+    @property
     def no_water_flow(self) -> bool | None:
         """Whether the no-water-flow protection (E3) is active."""
         return self.code_active(NO_WATER_FLOW_CODE)

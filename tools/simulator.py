@@ -27,6 +27,9 @@ Behaviour taken from the table:
     holding 1          working mode: 0 smart, 1 silence, 3 turbo, and the
                        undocumented 2 (super silence) that IPHCR owners use
     holding 2 to 10    setpoints and service parameters, range checked
+
+Behaviour seen on a real Geco GEPAC08:
+    --fault E3         also opens DIN3 (discrete input 4), the water flow switch
 """
 
 from __future__ import annotations
@@ -157,6 +160,7 @@ class HeatPump:
         flow_ok = "E3" not in self.faults
         self.discrete[0] = on
         self.discrete[1] = defrosting
+        self.discrete[4] = flow_ok  # DIN3: the water flow switch
         self.discrete[16] = any(self.discrete[a] for a in CODES)
         running = on and flow_ok and not defrosting
         self.discrete[17] = running

@@ -94,6 +94,7 @@ async def test_decodes_the_status(heat_pump: FairlandHeatPump) -> None:
     assert s.compressor_demand is True
     assert s.digital_input(2) is True
     assert s.remote_switch_closed is True
+    assert s.flow_switch_closed is True
     assert s.digital_input(1) is False
     assert s.digital_output(1) is True
     assert s.digital_output(9) is False
@@ -142,6 +143,18 @@ async def test_reports_active_codes_in_table_order(
     assert s.active_codes == ("E3", "Ed", "P0", "Fb")
     assert s.no_water_flow is True
     assert s.code_active("E1") is False
+
+
+async def test_an_open_flow_switch_reads_without_a_fault(
+    heat_pump: FairlandHeatPump, unit: MockModbusUnit
+) -> None:
+    """An open DIN3 reads as no flow even before the board raises E3."""
+    unit.discrete.update({4: False})
+
+    await heat_pump.async_update()
+
+    assert heat_pump.status.flow_switch_closed is False
+    assert heat_pump.status.no_water_flow is False
 
 
 def test_lists_every_code_of_the_table() -> None:
