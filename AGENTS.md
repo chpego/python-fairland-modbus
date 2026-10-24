@@ -8,9 +8,9 @@ to this file, so Claude-compatible tooling reads the same guidance.
 
 python-fairland-modbus is an asynchronous Python client for Fairland inverter
 pumps, heat pumps and water treatment devices over
-Modbus. It decodes the SunSpec information model and Fairland's proprietary
-register blocks (inverter, heat pump, water treatment) into
-typed values, and can write the control registers. It is pure Python built on
+Modbus. It decodes Fairland's proprietary register blocks (inverter, heat
+pump, water treatment) into typed values, and can write the control registers.
+It is pure Python built on
 [`modbus-connection`][modbus-connection], which owns the transport and the field
 decoding; this library declares the register layout and detects the device.
 
@@ -71,9 +71,6 @@ See [AI_POLICY.md](AI_POLICY.md) for the contribution policy around AI tooling.
 
 ## Gotchas
 
-- Word order differs by block. The SunSpec inverter and meter blocks are
-  big-endian. Sentinels are per type (`0x8000` int16,
-  `0xFFFF` uint16, `0xFFFFFFFF` uint32, IEEE-754 NaN, +/-FLT_MAX "no limit").
 - Writable control fields carry validators, and a successful write caches the
   value the device would report back (`decode(encode(value))`), not the raw input.
 - The MWH216 and MWH298 boards must be read in blocks of exactly 48 bits or 3
@@ -82,15 +79,13 @@ See [AI_POLICY.md](AI_POLICY.md) for the contribution policy around AI tooling.
   first and last address of each block so the planner reads it whole.
   `tests/test_heat_pump.py` checks every read against
   `heat_pump.testing.ALLOWED_READS`, and the simulator refuses anything else.
-- `test_sunspec_conformance.py` checks the register map against the vendored
-  SunSpec model definitions. If you move an address or scale reference, it will
-  tell you whether it still matches the spec.
 
 ## Where to read next
 
 - `README.md`: install, usage, and the development setup.
-- `tests/test_sunspec_conformance.py` and `tests/test_community_dumps.py`: how
-  the register map is validated against the spec and against real devices.
+- `tests/test_heat_pump.py` and `tests/test_simulator.py`: how the heat pump
+  register map is checked against the table, on a mock unit and against the
+  simulator.
 
 [modbus-connection]: https://github.com/home-assistant-libs/modbus-connection
 [uv]: https://docs.astral.sh/uv/
